@@ -8,8 +8,26 @@ from telegram.ext import Filters, Updater
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 
 _database = None
+keyboard = [[InlineKeyboardButton("Option 1", callback_data='1'),
+             InlineKeyboardButton("Option 2", callback_data='2')],
+
+            [InlineKeyboardButton("Option 3", callback_data='3')]]
 
 
+def start(bot, update):
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    update.message.reply_text(text="Please choice:", reply_markup=reply_markup)
+    return "CHOICE"
+
+
+def button(bot, update):
+    query = update.callback_query
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    bot.edit_message_text(text='Selected options: {}'.format(query.data),
+                          chat_id=query.message.chat_id,
+                          message_id=query.message.message_id,
+                          reply_markup=reply_markup)
+    return "CHOICE"
 
 def echo(bot, update):
     users_reply = update.message.text
@@ -36,6 +54,7 @@ def handle_users_reply(bot, update):
 
     states_functions = {
         'START': start,
+        'CHOICE': button,
         'ECHO': echo
     }
 
