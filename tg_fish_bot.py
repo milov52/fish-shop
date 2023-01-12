@@ -10,29 +10,43 @@ from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 from cms_api import get_products
 
 _database = None
-_keyboard = []
+
 
 def start(bot, update):
+    keyboard = []
     products = get_products()
     buttons = []
     for index, product in enumerate(products):
         buttons.append(InlineKeyboardButton(product.get("name"), callback_data=product.get("id")))
         if index % 2 == 0:
-            _keyboard.append(buttons)
+            keyboard.append(buttons)
 
-    reply_markup = InlineKeyboardMarkup(_keyboard)
+    reply_markup = InlineKeyboardMarkup(keyboard)
     update.message.reply_text(text="Please choice:", reply_markup=reply_markup)
-    return "CHOICE"
+    return "HANDLE_MENU"
 
 
-def button(bot, update):
+def menu(bot, update):
     query = update.callback_query
-    reply_markup = InlineKeyboardMarkup(_keyboard)
-    bot.edit_message_text(text='Selected options: {}'.format(query.data),
+
+    product = get_products(query.data)
+    name = product.get("name")
+    price = product["meta"]["display_price"]["with_tax"]["formatted"]
+    stock = product["meta"]["stock"]["level"]
+    description = product.get("description")
+
+    detail = f'{name}\n\n Стоимость:{price}\n В наличии:{stock}\n\n {description}'
+
+    bot.edit_message_text(text=detail,
                           chat_id=query.message.chat_id,
-                          message_id=query.message.message_id,
-                          reply_markup=reply_markup)
-    return "CHOICE"
+                          message_id=query.message.message_id)
+
+    # reply_markup = InlineKeyboardMarkup(_keyboard)
+    # bot.edit_message_text(text='Selected options: {}'.format(query.data),
+    #                       chat_id=query.message.chat_id,
+    #                       message_id=query.message.message_id,
+    #                       reply_markup=reply_markup)
+    return "START"
 
 def echo(bot, update):
     users_reply = update.message.text
@@ -59,7 +73,7 @@ def handle_users_reply(bot, update):
 
     states_functions = {
         'START': start,
-        'CHOICE': button,
+        'HANDLE_MENU': menu,
         'ECHO': echo
     }
 
