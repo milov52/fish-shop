@@ -7,22 +7,27 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Filters, Updater
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 
+from cms_api import get_products
+
 _database = None
-keyboard = [[InlineKeyboardButton("Option 1", callback_data='1'),
-             InlineKeyboardButton("Option 2", callback_data='2')],
-
-            [InlineKeyboardButton("Option 3", callback_data='3')]]
-
+_keyboard = []
 
 def start(bot, update):
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    products = get_products()
+    buttons = []
+    for index, product in enumerate(products):
+        buttons.append(InlineKeyboardButton(product.get("name"), callback_data=product.get("id")))
+        if index % 2 == 0:
+            _keyboard.append(buttons)
+
+    reply_markup = InlineKeyboardMarkup(_keyboard)
     update.message.reply_text(text="Please choice:", reply_markup=reply_markup)
     return "CHOICE"
 
 
 def button(bot, update):
     query = update.callback_query
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    reply_markup = InlineKeyboardMarkup(_keyboard)
     bot.edit_message_text(text='Selected options: {}'.format(query.data),
                           chat_id=query.message.chat_id,
                           message_id=query.message.message_id,
