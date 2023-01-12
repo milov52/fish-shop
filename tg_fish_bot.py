@@ -7,7 +7,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Filters, Updater
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 
-from cms_api import get_products
+from cms_api import get_file_by_id, get_products
 
 _database = None
 
@@ -30,22 +30,20 @@ def menu(bot, update):
     query = update.callback_query
 
     product = get_products(query.data)
-    name = product.get("name")
+
+    file_id = product["relationships"]["main_image"]["data"]["id"]
+    image_data = get_file_by_id(file_id)
+    image_path = image_data["data"]["link"]["href"]
+
+    name = product["name"]
     price = product["meta"]["display_price"]["with_tax"]["formatted"]
     stock = product["meta"]["stock"]["level"]
     description = product.get("description")
+    detail = f'{name}\n\n Стоимость: {price}\n В наличии: {stock}\n\n {description}'
 
-    detail = f'{name}\n\n Стоимость:{price}\n В наличии:{stock}\n\n {description}'
-
-    bot.edit_message_text(text=detail,
-                          chat_id=query.message.chat_id,
-                          message_id=query.message.message_id)
-
-    # reply_markup = InlineKeyboardMarkup(_keyboard)
-    # bot.edit_message_text(text='Selected options: {}'.format(query.data),
-    #                       chat_id=query.message.chat_id,
-    #                       message_id=query.message.message_id,
-    #                       reply_markup=reply_markup)
+    bot.send_photo(query.message.chat_id,
+                   image_path,
+                   caption=detail)
     return "START"
 
 def echo(bot, update):

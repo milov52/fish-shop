@@ -5,8 +5,6 @@ import os
 import requests
 from dotenv import load_dotenv
 
-
-
 def get_access_token():
     data = {
         'client_id': os.environ.get("CLIENT_ID"),
@@ -25,7 +23,6 @@ def add_to_cart(product_id):
         }
     }
     cart = requests.post('https://api.moltin.com/v2/carts/1/items/', json=cart_data, headers=headers)
-    print(cart.json())
 
 def get_products(product_id=0):
     access_token = get_access_token()
@@ -41,15 +38,20 @@ def get_products(product_id=0):
 
     products = products.json().get("data")
     return products
-    # return [item.get("id") for item in products]
 
+def get_file_by_id(file_id):
+    access_token = get_access_token()
+    headers = {
+        'Authorization': f'Bearer {access_token.json().get("access_token")}'}
+    file_data = requests.get(f'https://api.moltin.com/v2/files/{file_id}', headers=headers)
+    return file_data.json()
 
 
 def main():
     load_dotenv()
-    products =  get_products()
-    print(products)
-    # add_to_cart(product_id)
+    product_id = "88dcac90-2829-4970-afc9-beddd29dbc7f"
+    get_file_by_id(product_id)
+
 
 if __name__ == '__main__':
     main()
