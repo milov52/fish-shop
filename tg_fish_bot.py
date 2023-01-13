@@ -17,10 +17,10 @@ def create_products_keyboard():
 
     products = get_products()
     for index, product in enumerate(products):
-        buttons.append(InlineKeyboardButton(product.get("name"), callback_data=product.get("id")))
+        buttons.append(InlineKeyboardButton(product["name"], callback_data=product["id"]))
         if index % 2 == 0:
             keyboard.append(buttons)
-
+    # keyboard.append(InlineKeyboardButton('Корзина', callback_data='cart'))
     return keyboard
 
 def start(bot, update):
@@ -34,14 +34,13 @@ def menu(bot, update):
     query = update.callback_query
 
     product = get_products(query.data)
-    file_id = product["relationships"]["main_image"]["data"]["id"]
-    image_data = get_file_by_id(file_id)
-    image_path = image_data["data"]["link"]["href"]
+    image_path = product["image_path"]
 
     name = product["name"]
-    price = product["meta"]["display_price"]["with_tax"]["formatted"]
-    stock = product["meta"]["stock"]["level"]
-    description = product.get("description")
+    description = product["description"]
+    price = product["price"]
+    stock = product["stock"]
+
     detail = f'{name}\n\n Стоимость: {price}\n В наличии: {stock}\n\n {description}'
 
     keyboard = [[InlineKeyboardButton("Назад", callback_data='Back')],
@@ -50,6 +49,7 @@ def menu(bot, update):
                     InlineKeyboardButton("2 шт", callback_data=f"{query.data},2"),
                     InlineKeyboardButton("5 шт", callback_data=f"{query.data},5")
                 ]]
+    # keyboard += InlineKeyboardButton('Корзина', callback_data='cart')
 
     bot.delete_message(chat_id=update.callback_query.message.chat_id,
                        message_id=update.callback_query.message.message_id)
@@ -63,11 +63,19 @@ def menu(bot, update):
 
 def description(bot, update):
     query = update.callback_query
+
+    # if query.data == 'cart':
+
+
     if query.data != 'Back':
+        chat_id = update.callback_query.message.chat_id
+        print(chat_id)
         product_id = query.data.split(',')[0]
         count = int(query.data.split(',')[1])
-        add_to_cart(product_id, count)
+        add_to_cart(chat_id, product_id, count)
         return "HANDLE_DESCRIPTION"
+
+
 
     reply_markup = InlineKeyboardMarkup(create_products_keyboard())
     bot.send_message(text="Please choice:",
