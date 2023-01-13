@@ -11,24 +11,27 @@ from cms_api import get_file_by_id, get_products
 
 _database = None
 
-
-def start(bot, update):
+def create_products_keyboard():
     keyboard = []
-    products = get_products()
     buttons = []
+
+    products = get_products()
     for index, product in enumerate(products):
         buttons.append(InlineKeyboardButton(product.get("name"), callback_data=product.get("id")))
         if index % 2 == 0:
             keyboard.append(buttons)
 
-    reply_markup = InlineKeyboardMarkup(keyboard)
+    return keyboard
+
+def start(bot, update):
+    reply_markup = InlineKeyboardMarkup(create_products_keyboard())
     update.message.reply_text(text="Please choice:", reply_markup=reply_markup)
+
     return "HANDLE_MENU"
 
-
 def menu(bot, update):
-    query = update.callback_query
 
+    query = update.callback_query
     product = get_products(query.data)
 
     file_id = product["relationships"]["main_image"]["data"]["id"]
@@ -41,19 +44,33 @@ def menu(bot, update):
     description = product.get("description")
     detail = f'{name}\n\n Стоимость: {price}\n В наличии: {stock}\n\n {description}'
 
+    keyboard = [[InlineKeyboardButton("Назад", callback_data='Back')]]
+
+    bot.delete_message(chat_id=update.callback_query.message.chat_id,
+                       message_id=update.callback_query.message.message_id)
+
     bot.send_photo(query.message.chat_id,
                    image_path,
-                   caption=detail)
-    return "START"
+                   caption=detail,
+                   reply_markup=InlineKeyboardMarkup(keyboard))
+
+    return "HANDLE_DESCRIPTION"
+
+def description(bot, update):
+    reply_markup = InlineKeyboardMarkup(create_products_keyboard())
+    bot.send_message(text="Please choice:",
+                     chat_id=update.callback_query.message.chat_id,
+                     reply_markup=reply_markup)
+    # update.callback_query.message.text(text="Please choice:", reply_markup=reply_markup)
+    return "HANDLE_MENU"
 
 def echo(bot, update):
     users_reply = update.message.text
+
     update.message.reply_text(users_reply)
     return "ECHO"
 
 def handle_users_reply(bot, update):
-    db = get_database_connection()
-
     if update.message:
         user_reply = update.message.text
         chat_id = update.message.chat_id
@@ -72,6 +89,7 @@ def handle_users_reply(bot, update):
     states_functions = {
         'START': start,
         'HANDLE_MENU': menu,
+        'HANDLE_DESCRIPTION': description,
         'ECHO': echo
     }
 
@@ -96,6 +114,7 @@ def get_database_connection():
 if __name__ == '__main__':
     load_dotenv()
     token = os.environ.get("TELEGRAM_TOKEN")
+    db = get_database_connection()
 
     updater = Updater(token)
     dispatcher = updater.dispatcher
