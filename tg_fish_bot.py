@@ -64,12 +64,6 @@ def description(bot, update):
     # update.callback_query.message.text(text="Please choice:", reply_markup=reply_markup)
     return "HANDLE_MENU"
 
-def echo(bot, update):
-    users_reply = update.message.text
-
-    update.message.reply_text(users_reply)
-    return "ECHO"
-
 def handle_users_reply(bot, update):
     if update.message:
         user_reply = update.message.text
@@ -85,12 +79,10 @@ def handle_users_reply(bot, update):
     else:
         user_state = db.get(chat_id).decode('utf-8')
 
-
     states_functions = {
         'START': start,
         'HANDLE_MENU': menu,
-        'HANDLE_DESCRIPTION': description,
-        'ECHO': echo
+        'HANDLE_DESCRIPTION': description
     }
 
     state_handler = states_functions[user_state]
