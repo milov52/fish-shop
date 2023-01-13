@@ -14,15 +14,21 @@ def get_access_token():
     access_token = requests.post('https://api.moltin.com/oauth/access_token', data=data)
     return access_token
 
-def add_to_cart(product_id):
+def add_to_cart(product_id, quantity):
+    access_token = get_access_token()
+
+    headers = {
+        'Authorization': f'Bearer {access_token.json().get("access_token")}'}
+
     cart_data = {
         "data": {
             "id": product_id,
             "type": "cart_item",
-            "quantity": 1
+            "quantity": quantity
         }
     }
     cart = requests.post('https://api.moltin.com/v2/carts/1/items/', json=cart_data, headers=headers)
+    print(cart.json())
 
 def get_products(product_id=0):
     access_token = get_access_token()
@@ -49,8 +55,9 @@ def get_file_by_id(file_id):
 
 def main():
     load_dotenv()
-    product_id = "88dcac90-2829-4970-afc9-beddd29dbc7f"
-    get_file_by_id(product_id)
+    product_id = "31ca00db-fd4a-480f-ad92-4dc69f6f839b"
+    count = 2
+    add_to_cart(product_id, count)
 
 
 if __name__ == '__main__':

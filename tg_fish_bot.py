@@ -7,7 +7,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Filters, Updater
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 
-from cms_api import get_file_by_id, get_products
+from cms_api import get_file_by_id, get_products, add_to_cart
 
 _database = None
 
@@ -32,8 +32,8 @@ def start(bot, update):
 def menu(bot, update):
 
     query = update.callback_query
-    product = get_products(query.data)
 
+    product = get_products(query.data)
     file_id = product["relationships"]["main_image"]["data"]["id"]
     image_data = get_file_by_id(file_id)
     image_path = image_data["data"]["link"]["href"]
@@ -44,7 +44,12 @@ def menu(bot, update):
     description = product.get("description")
     detail = f'{name}\n\n Стоимость: {price}\n В наличии: {stock}\n\n {description}'
 
-    keyboard = [[InlineKeyboardButton("Назад", callback_data='Back')]]
+    keyboard = [[InlineKeyboardButton("Назад", callback_data='Back')],
+                [
+                    InlineKeyboardButton("1 шт", callback_data=f"{query.data},1"),
+                    InlineKeyboardButton("2 шт", callback_data=f"{query.data},2"),
+                    InlineKeyboardButton("5 шт", callback_data=f"{query.data},5")
+                ]]
 
     bot.delete_message(chat_id=update.callback_query.message.chat_id,
                        message_id=update.callback_query.message.message_id)
@@ -57,11 +62,17 @@ def menu(bot, update):
     return "HANDLE_DESCRIPTION"
 
 def description(bot, update):
+    query = update.callback_query
+    if query.data != 'Back':
+        product_id = query.data.split(',')[0]
+        count = int(query.data.split(',')[1])
+        add_to_cart(product_id, count)
+        return "HANDLE_DESCRIPTION"
+
     reply_markup = InlineKeyboardMarkup(create_products_keyboard())
     bot.send_message(text="Please choice:",
                      chat_id=update.callback_query.message.chat_id,
                      reply_markup=reply_markup)
-    # update.callback_query.message.text(text="Please choice:", reply_markup=reply_markup)
     return "HANDLE_MENU"
 
 def handle_users_reply(bot, update):
