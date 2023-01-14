@@ -133,6 +133,26 @@ def get_file_by_id(file_id: str, client_id: str):
     file_data.raise_for_status()
     return file_data.json()
 
+def create_user_account(name: str, email: str, client_id: str):
+    check_access_token(client_id)
+    access_token = os.getenv('ACCESS_TOKEN')
+    headers = {
+        'Authorization': f'Bearer {access_token.json().get("access_token")}'}
+
+    json_data = {
+        'data': {
+            'type': 'customer',
+            'name': name,
+            'email': email,
+        },
+    }
+
+    response_create_customer = requests.post(
+        'https://api.moltin.com/v2/customers',
+        headers=headers,
+        json=json_data
+        )
+    response_create_customer.raise_for_status()
 
 
 def main():
