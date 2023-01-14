@@ -6,7 +6,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 from telegram.ext import Filters, Updater
 
-from cms_api import add_to_cart, delete_from_cart, get_cart, get_products
+import cms_api
 
 _database = None
 
@@ -15,7 +15,7 @@ def create_products_keyboard():
     keyboard = []
     buttons = []
 
-    products = get_products()
+    products = cms_api.get_products()
 
     for index, product in enumerate(products):
         buttons.append(InlineKeyboardButton(product["name"], callback_data=product["id"]))
@@ -39,20 +39,14 @@ def start(bot, update):
     return "HANDLE_MENU"
 
 
-def menu(bot, update):
+def handle_menu(bot, update):
     query = update.callback_query
 
     if query.data == 'cart':
-        cart_info(bot, update)
-        return "HANDLE_MENU"
-    elif query.data == 'back':
-        start(bot, update)
-        return "HANDLE_MENU"
-    elif query.data.startswith('delete'):
-        delete_items_from_cart(bot, update)
-        return "HANDLE_MENU"
+        view_cart(bot, update)
+        return "HANDLE_CART"
 
-    product = get_products(query.data)
+    product = cms_api.get_products(query.data)
     image_path = product["image_path"]
 
     name = product["name"]
@@ -81,9 +75,8 @@ def menu(bot, update):
 
     return "HANDLE_DESCRIPTION"
 
-
-def cart_info(bot, update):
-    cart_info = get_cart(update.callback_query.message.chat_id)
+def generate_cart(bot, update):
+    cart_info = cms_api.get_cart(update.callback_query.message.chat_id)
     message = ''
     buttons = []
 
@@ -98,41 +91,46 @@ def cart_info(bot, update):
 
     message += f'Full amount: {cart_info["full_amount"]}'
 
-    bot.delete_message(chat_id=update.callback_query.message.chat_id,
-                       message_id=update.callback_query.message.message_id)
-
     buttons.append([InlineKeyboardButton("В меню", callback_data='back')])
+    reply_markup = InlineKeyboardMarkup(buttons)
 
-    bot.send_message(text=message,
-                     chat_id=update.callback_query.message.chat_id,
-                     reply_markup=InlineKeyboardMarkup(buttons))
+    return message, reply_markup
 
-
-def delete_items_from_cart(bot, update):
-    item_id = update.callback_query.data.split(':')[1]
-    cart_id = update.callback_query.message.chat_id
-    delete_from_cart(cart_id, item_id)
-    cart_info(bot, update)
-
-
-def description(bot, update):
+def view_cart(bot, update):
     query = update.callback_query
-
-    if query.data == 'cart':
-        cart_info(bot, update)
-        return "HANDLE_DESCRIPTION"
-    elif query.data == 'back':
+    if query.data == 'back':
         start(bot, update)
         return "HANDLE_MENU"
     elif query.data.startswith('delete'):
-        delete_items_from_cart(bot, update)
+        item_id = query.data.split(':')[1]
+        cart_id = query.message.chat_id
+        cms_api.delete_from_cart(cart_id, item_id)
+        generate_cart(bot, update)
+
+    bot.delete_message(chat_id=update.callback_query.message.chat_id,
+                       message_id=update.callback_query.message.message_id)
+
+    message, reply_markup = generate_cart(bot, update)
+    bot.send_message(text=message,
+                     chat_id=update.callback_query.message.chat_id,
+                     reply_markup=reply_markup)
+    return "HANDLE_CART"
+
+def handle_description(bot, update):
+    query = update.callback_query
+
+    if query.data == 'cart':
+        view_cart(bot, update)
+        return "HANDLE_CART"
+    elif query.data == 'back':
+        start(bot, update)
         return "HANDLE_MENU"
 
     chat_id = update.callback_query.message.chat_id
 
     product_id = query.data.split(',')[0]
     count = int(query.data.split(',')[1])
-    add_to_cart(chat_id, product_id, count)
+    cms_api.add_to_cart(chat_id, product_id, count)
     return "HANDLE_DESCRIPTION"
 
 
@@ -153,9 +151,9 @@ def handle_users_reply(bot, update):
 
     states_functions = {
         'START': start,
-        'HANDLE_MENU': menu,
-        'HANDLE_DESCRIPTION': description,
-        # 'HANDLE_CART': cart,
+        'HANDLE_MENU': handle_menu,
+        'HANDLE_DESCRIPTION': handle_description,
+        'HANDLE_CART': view_cart,
     }
 
     state_handler = states_functions[user_state]
