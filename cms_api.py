@@ -37,18 +37,24 @@ def get_cart(cart_id):
     cart_items_response = requests.get(f'https://api.moltin.com/v2/carts/{cart_id}/items', headers=headers)
 
     cart = []
-    for car_items in cart_items_response.json()["data"]:
+    for cart_items in cart_items_response.json()["data"]:
         cart_item = {}
-        cart_item["name"] = car_items["name"]
-        cart_item["description"] = car_items["description"]
-        cart_item["price"] = car_items["unit_price"]["amount"]
-        cart_item["quantity"] = car_items["quantity"]
-        cart_item["amount"] = car_items["value"]["amount"]
+        cart_item["id"] = cart_items["id"]
+        cart_item["name"] = cart_items["name"]
+        cart_item["description"] = cart_items["description"]
+        cart_item["price"] = cart_items["unit_price"]["amount"]
+        cart_item["quantity"] = cart_items["quantity"]
+        cart_item["amount"] = cart_items["value"]["amount"]
         cart.append(cart_item)
 
     full_amount = cart_responce.json()["data"]["meta"]["display_price"]["with_tax"]["amount"]
     return {"cart_items": cart, "full_amount": full_amount}
 
+def delete_from_cart(cart_id, product_id):
+    access_token = get_access_token()
+    headers = {
+        'Authorization': f'Bearer {access_token.json().get("access_token")}'}
+    cart = requests.delete(f'https://api.moltin.com/v2/carts/{cart_id}/items/{product_id}', headers=headers)
 
 def get_products(product_id=0):
     access_token = get_access_token()
@@ -90,11 +96,12 @@ def get_file_by_id(file_id):
 
 def main():
     load_dotenv()
-    chat_id = 130324158
+    chat_id = "130324158"
     product_id = "31ca00db-fd4a-480f-ad92-4dc69f6f839b"
     count = 2
-    # add_to_cart(chat_id, product_id, count)
-    print(get_cart(chat_id))
+    # print(get_cart(chat_id))
+    delete_from_cart(chat_id, product_id)
+    # print(get_cart(chat_id))
 
 
 if __name__ == '__main__':

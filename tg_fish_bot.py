@@ -1,29 +1,30 @@
 import os
-import logging
+
 import redis
 from dotenv import load_dotenv
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-
-from telegram.ext import Filters, Updater
 from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
+from telegram.ext import Filters, Updater
 
-from cms_api import get_cart, get_file_by_id, get_products, add_to_cart
+from cms_api import add_to_cart, delete_from_cart, get_cart, get_products
 
 _database = None
 
-def create_products_keyboard(prefix=''):
+
+def create_products_keyboard():
     keyboard = []
     buttons = []
 
     products = get_products()
 
     for index, product in enumerate(products):
-        buttons.append(InlineKeyboardButton(prefix + product["name"], callback_data=product["id"]))
+        buttons.append(InlineKeyboardButton(product["name"], callback_data=product["id"]))
         if index % 2 == 0:
             keyboard.append(buttons)
-    if not prefix:
-        keyboard.append([InlineKeyboardButton('Корзина', callback_data='cart')])
+
+    keyboard.append([InlineKeyboardButton('Корзина', callback_data='cart')])
     return keyboard
+
 
 def start(bot, update):
     reply_markup = InlineKeyboardMarkup(create_products_keyboard())
@@ -37,13 +38,19 @@ def start(bot, update):
 
     return "HANDLE_MENU"
 
-def menu(bot, update):
 
+def menu(bot, update):
     query = update.callback_query
 
     if query.data == 'cart':
-        cart_detail(bot, update)
-        return "START"
+        cart_info(bot, update)
+        return "HANDLE_MENU"
+    elif query.data == 'back':
+        start(bot, update)
+        return "HANDLE_MENU"
+    elif query.data.startswith('delete'):
+        delete_items_from_cart(bot, update)
+        return "HANDLE_MENU"
 
     product = get_products(query.data)
     image_path = product["image_path"]
@@ -55,7 +62,7 @@ def menu(bot, update):
 
     detail = f'{name}\n\n Стоимость: {price}\n В наличии: {stock}\n\n {description}'
 
-    keyboard = [[InlineKeyboardButton("Назад", callback_data='Back')],
+    keyboard = [[InlineKeyboardButton("Назад", callback_data='back')],
                 [
                     InlineKeyboardButton("1 шт", callback_data=f"{query.data},1"),
                     InlineKeyboardButton("2 шт", callback_data=f"{query.data},2"),
@@ -63,7 +70,6 @@ def menu(bot, update):
                 ],
                 [InlineKeyboardButton('Корзина', callback_data='cart')]
                 ]
-
 
     bot.delete_message(chat_id=update.callback_query.message.chat_id,
                        message_id=update.callback_query.message.message_id)
@@ -75,53 +81,60 @@ def menu(bot, update):
 
     return "HANDLE_DESCRIPTION"
 
-def cart_detail(bot, update):
+
+def cart_info(bot, update):
     cart_info = get_cart(update.callback_query.message.chat_id)
     message = ''
+    buttons = []
+
     for item in cart_info["cart_items"]:
         message += f'{item["name"]}\n\n' \
-                   f'{item["description"]}\n\n' \
+                   f'{item["description"][:100]}\n\n' \
                    f'Price: {item["price"]}\n' \
-                   f'{item["quantity"]} in cart on {item["amount"]}\n\n' \
-                   f'Full amount: {cart_info["full_amount"]}'
+                   f'{item["quantity"]} in cart on {item["amount"]}\n\n'
+
+        buttons.append([InlineKeyboardButton(f'Убрать из корзины {item["name"]}',
+                                             callback_data=f'delete:{item["id"]}')])
+
+    message += f'Full amount: {cart_info["full_amount"]}'
 
     bot.delete_message(chat_id=update.callback_query.message.chat_id,
                        message_id=update.callback_query.message.message_id)
 
-    keyboard = create_products_keyboard(prefix='Убрать из корзины ')
-    keyboard.append([InlineKeyboardButton("В меню", callback_data='Back')])
-    # keyboard = [[InlineKeyboardButton("В меню", callback_data='Back')],
-    #             [InlineKeyboardButton('Заказать', callback_data='order')]
-    #             ]
+    buttons.append([InlineKeyboardButton("В меню", callback_data='back')])
 
-    print(keyboard)
     bot.send_message(text=message,
-
                      chat_id=update.callback_query.message.chat_id,
-                     reply_markup=InlineKeyboardMarkup(keyboard))
+                     reply_markup=InlineKeyboardMarkup(buttons))
+
+
+def delete_items_from_cart(bot, update):
+    item_id = update.callback_query.data.split(':')[1]
+    cart_id = update.callback_query.message.chat_id
+    delete_from_cart(cart_id, item_id)
+    cart_info(bot, update)
+
 
 def description(bot, update):
     query = update.callback_query
 
     if query.data == 'cart':
-        cart_detail(bot, update)
-
-    if query.data != 'Back':
-        chat_id = update.callback_query.message.chat_id
-
-        product_id = query.data.split(',')[0]
-        count = int(query.data.split(',')[1])
-        add_to_cart(chat_id, product_id, count)
+        cart_info(bot, update)
         return "HANDLE_DESCRIPTION"
+    elif query.data == 'back':
+        start(bot, update)
+        return "HANDLE_MENU"
+    elif query.data.startswith('delete'):
+        delete_items_from_cart(bot, update)
+        return "HANDLE_MENU"
 
-    reply_markup = InlineKeyboardMarkup(create_products_keyboard())
-    bot.delete_message(chat_id=update.callback_query.message.chat_id,
-                       message_id=update.callback_query.message.message_id)
+    chat_id = update.callback_query.message.chat_id
 
-    bot.send_message(text="Please choice:",
-                     chat_id=update.callback_query.message.chat_id,
-                     reply_markup=reply_markup)
-    return "HANDLE_MENU"
+    product_id = query.data.split(',')[0]
+    count = int(query.data.split(',')[1])
+    add_to_cart(chat_id, product_id, count)
+    return "HANDLE_DESCRIPTION"
+
 
 def handle_users_reply(bot, update):
     if update.message:
@@ -142,7 +155,7 @@ def handle_users_reply(bot, update):
         'START': start,
         'HANDLE_MENU': menu,
         'HANDLE_DESCRIPTION': description,
-        'HANDLE_CART': cart_detail,
+        # 'HANDLE_CART': cart,
     }
 
     state_handler = states_functions[user_state]
@@ -151,6 +164,7 @@ def handle_users_reply(bot, update):
         db.set(chat_id, next_state)
     except Exception as err:
         print(err)
+
 
 def get_database_connection():
     global _database
@@ -175,4 +189,3 @@ if __name__ == '__main__':
     dispatcher.add_handler(MessageHandler(Filters.text, handle_users_reply))
 
     updater.start_polling()
-
