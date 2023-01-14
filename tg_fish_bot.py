@@ -92,8 +92,9 @@ def generate_cart(bot, update):
     message += f'Full amount: {cart_info["full_amount"]}'
 
     buttons.append([InlineKeyboardButton("В меню", callback_data='back')])
-    reply_markup = InlineKeyboardMarkup(buttons)
+    buttons.append([InlineKeyboardButton("Оплатить", callback_data='pay')])
 
+    reply_markup = InlineKeyboardMarkup(buttons)
     return message, reply_markup
 
 def view_cart(bot, update):
@@ -106,6 +107,10 @@ def view_cart(bot, update):
         cart_id = query.message.chat_id
         cms_api.delete_from_cart(cart_id, item_id)
         generate_cart(bot, update)
+    elif query.data == 'pay':
+        bot.send_message(text='Пришлите адрес электронной почты:',
+                         chat_id=update.callback_query.message.chat_id)
+        return "WAITING_EMAIL"
 
     bot.delete_message(chat_id=update.callback_query.message.chat_id,
                        message_id=update.callback_query.message.message_id)
@@ -115,6 +120,18 @@ def view_cart(bot, update):
                      chat_id=update.callback_query.message.chat_id,
                      reply_markup=reply_markup)
     return "HANDLE_CART"
+
+def waiting_email(bot, update):
+    email = update.message.text
+
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("В меню", callback_data='back')]
+    ])
+
+    bot.send_message(text=f'Ваш email: {email}',
+                     chat_id=update.message.chat_id,
+                     reply_markup=keyboard)
+    return "START"
 
 def handle_description(bot, update):
     query = update.callback_query
@@ -154,6 +171,7 @@ def handle_users_reply(bot, update):
         'HANDLE_MENU': handle_menu,
         'HANDLE_DESCRIPTION': handle_description,
         'HANDLE_CART': view_cart,
+        'WAITING_EMAIL': waiting_email,
     }
 
     state_handler = states_functions[user_state]
