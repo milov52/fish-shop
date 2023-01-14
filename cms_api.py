@@ -1,9 +1,7 @@
-
 import os
 from datetime import datetime
 
 import requests
-from dotenv import load_dotenv
 
 
 def get_access_token(client_id: str):
@@ -134,6 +132,7 @@ def get_file_by_id(file_id: str, client_id: str):
     file_data.raise_for_status()
     return file_data.json()
 
+
 def create_user_account(name: str, email: str, client_id: str):
     check_access_token(client_id)
     access_token = os.getenv('ACCESS_TOKEN')
@@ -152,5 +151,5 @@ def create_user_account(name: str, email: str, client_id: str):
         'https://api.moltin.com/v2/customers',
         headers=headers,
         json=json_data
-        )
+    )
     response_create_customer.raise_for_status()
