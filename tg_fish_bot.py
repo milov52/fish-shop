@@ -15,18 +15,20 @@ def create_products_keyboard():
     keyboard = []
     buttons = []
 
-    products = cms_api.get_products(client_id)
+    products = cms_api.get_products(client_id=client_id)
 
     for index, product in enumerate(products):
-        buttons.append(InlineKeyboardButton(product["name"], callback_data=product["id"]))
+        buttons.append(InlineKeyboardButton(product["name"],
+                                            callback_data=product["id"]))
         if index % 2 == 0:
             keyboard.append(buttons)
 
-    keyboard.append([InlineKeyboardButton('Корзина', callback_data='cart')])
+    keyboard.append([InlineKeyboardButton('Корзина',
+                                          callback_data='cart')])
     return keyboard
 
 
-def start(bot, update):
+def start(bot, update, client_id):
     reply_markup = InlineKeyboardMarkup(create_products_keyboard())
 
     if update.message:
@@ -39,14 +41,14 @@ def start(bot, update):
     return "HANDLE_MENU"
 
 
-def handle_menu(bot, update):
+def handle_menu(bot, update, client_id):
     query = update.callback_query
 
     if query.data == 'cart':
-        view_cart(bot, update)
+        view_cart(bot, update, client_id)
         return "HANDLE_CART"
 
-    product = cms_api.get_products(client_id, query.data)
+    product = cms_api.get_products(product_id=query.data, client_id=client_id)
     image_path = product["image_path"]
 
     name = product["name"]
@@ -75,9 +77,9 @@ def handle_menu(bot, update):
 
     return "HANDLE_DESCRIPTION"
 
-def generate_cart(bot, update):
+def generate_cart(bot, update, client_id):
     chat_id = update.callback_query.message.chat_id
-    cart_info = cms_api.get_cart(chat_id,client_id)
+    cart_info = cms_api.get_cart(chat_id, client_id)
     message = ''
     buttons = []
 
@@ -98,16 +100,16 @@ def generate_cart(bot, update):
     reply_markup = InlineKeyboardMarkup(buttons)
     return message, reply_markup
 
-def view_cart(bot, update):
+def view_cart(bot, update, client_id):
     query = update.callback_query
     if query.data == 'back':
-        start(bot, update)
+        start(bot, update, client_id)
         return "HANDLE_MENU"
     elif query.data.startswith('delete'):
         item_id = query.data.split(':')[1]
         cart_id = query.message.chat_id
         cms_api.delete_from_cart(cart_id, item_id, client_id)
-        generate_cart(bot, update)
+        generate_cart(bot, update, client_id)
     elif query.data == 'pay':
         bot.send_message(text='Пришлите адрес электронной почты:',
                          chat_id=update.callback_query.message.chat_id)
@@ -116,44 +118,44 @@ def view_cart(bot, update):
     bot.delete_message(chat_id=update.callback_query.message.chat_id,
                        message_id=update.callback_query.message.message_id)
 
-    message, reply_markup = generate_cart(bot, update)
+    message, reply_markup = generate_cart(bot, update, client_id)
     bot.send_message(text=message,
                      chat_id=update.callback_query.message.chat_id,
                      reply_markup=reply_markup)
     return "HANDLE_CART"
 
-def waiting_email(bot, update):
+def waiting_email(bot, update, client_id):
     email = update.message.text
     chat_id = update.message.chat_id
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("В меню", callback_data='back')]
     ])
 
-    bot.send_message(text=f'Ваш email: {email}',
+    bot.send_message(text=f'Ваш email: {email} сохранен',
                      chat_id=chat_id,
                      reply_markup=keyboard)
     cms_api.create_user_account(str(chat_id), email, client_id)
     return "START"
 
-def handle_description(bot, update):
+def handle_description(bot, update, client_id):
     query = update.callback_query
 
     if query.data == 'cart':
-        view_cart(bot, update)
+        view_cart(bot, update, client_id)
         return "HANDLE_CART"
     elif query.data == 'back':
-        start(bot, update)
+        start(bot, update, client_id)
         return "HANDLE_MENU"
 
     chat_id = update.callback_query.message.chat_id
 
     product_id = query.data.split(',')[0]
     count = int(query.data.split(',')[1])
-    cms_api.add_to_cart(chat_id, product_id, count)
+    cms_api.add_to_cart(chat_id, product_id, count, client_id)
     return "HANDLE_DESCRIPTION"
 
 
-def handle_users_reply(bot, update):
+def handle_users_reply(bot, update, client_id):
     if update.message:
         user_reply = update.message.text
         chat_id = update.message.chat_id
@@ -178,7 +180,7 @@ def handle_users_reply(bot, update):
 
     state_handler = states_functions[user_state]
     try:
-        next_state = state_handler(bot, update)
+        next_state = state_handler(bot, update, client_id)
         db.set(chat_id, next_state)
     except Exception as err:
         print(err)
@@ -204,8 +206,8 @@ if __name__ == '__main__':
 
     updater = Updater(token)
     dispatcher = updater.dispatcher
-    dispatcher.add_handler(CommandHandler('start', partial(handle_users_reply, client_id)))
-    dispatcher.add_handler(CallbackQueryHandler(partial(handle_users_reply, client_id)))
-    dispatcher.add_handler(MessageHandler(Filters.text, partial(handle_users_reply, client_id)))
+    dispatcher.add_handler(CommandHandler('start', partial(handle_users_reply, client_id=client_id)))
+    dispatcher.add_handler(CallbackQueryHandler(partial(handle_users_reply, client_id=client_id)))
+    dispatcher.add_handler(MessageHandler(Filters.text, partial(handle_users_reply, client_id=client_id)))
 
     updater.start_polling()

@@ -1,5 +1,6 @@
-import datetime
+
 import os
+from datetime import datetime
 
 import requests
 from dotenv import load_dotenv
@@ -32,7 +33,7 @@ def add_to_cart(cart_id: str, product_id: str, quantity: int, client_id: str):
     check_access_token(client_id)
     access_token = os.getenv('ACCESS_TOKEN')
     headers = {
-        'Authorization': f'Bearer {access_token.json().get("access_token")}'}
+        'Authorization': f'Bearer {access_token}'}
 
     cart_data = {
         "data": {
@@ -52,7 +53,7 @@ def get_cart(cart_id: str, client_id: str):
     access_token = os.getenv('ACCESS_TOKEN')
 
     headers = {
-        'Authorization': f'Bearer {access_token.json().get("access_token")}'}
+        'Authorization': f'Bearer {access_token}'}
     cart_responce = requests.get(f'https://api.moltin.com/v2/carts/{cart_id}',
                                  headers=headers)
     cart_responce.raise_for_status()
@@ -79,18 +80,18 @@ def delete_from_cart(cart_id: str, product_id: str, client_id: str):
     check_access_token(client_id)
     access_token = os.getenv('ACCESS_TOKEN')
     headers = {
-        'Authorization': f'Bearer {access_token.json().get("access_token")}'}
+        'Authorization': f'Bearer {access_token}'}
 
     cart = requests.delete(f'https://api.moltin.com/v2/carts/{cart_id}/items/{product_id}',
                            headers=headers)
     cart.raise_for_status()
 
 
-def get_products(client_id: str, product_id: str = ''):
+def get_products(client_id, product_id=0):
     check_access_token(client_id)
     access_token = os.getenv('ACCESS_TOKEN')
     headers = {
-        'Authorization': f'Bearer {access_token.json().get("access_token")}'}
+        'Authorization': f'Bearer {access_token}'}
 
     pcm_url = os.environ.get("BASE_URL")
     if product_id:
@@ -102,7 +103,7 @@ def get_products(client_id: str, product_id: str = ''):
         product_data = product_data.json()["data"]
 
         file_id = product_data["relationships"]["main_image"]["data"]["id"]
-        image_data = get_file_by_id(file_id)
+        image_data = get_file_by_id(file_id, client_id)
 
         product["file_id"] = file_id
         product["image_path"] = image_data["data"]["link"]["href"]
@@ -126,7 +127,7 @@ def get_file_by_id(file_id: str, client_id: str):
     check_access_token(client_id)
     access_token = os.getenv('ACCESS_TOKEN')
     headers = {
-        'Authorization': f'Bearer {access_token.json().get("access_token")}'}
+        'Authorization': f'Bearer {access_token}'}
 
     file_data = requests.get(f'https://api.moltin.com/v2/files/{file_id}',
                              headers=headers)
@@ -137,7 +138,7 @@ def create_user_account(name: str, email: str, client_id: str):
     check_access_token(client_id)
     access_token = os.getenv('ACCESS_TOKEN')
     headers = {
-        'Authorization': f'Bearer {access_token.json().get("access_token")}'}
+        'Authorization': f'Bearer {access_token}'}
 
     json_data = {
         'data': {
@@ -153,11 +154,3 @@ def create_user_account(name: str, email: str, client_id: str):
         json=json_data
         )
     response_create_customer.raise_for_status()
-
-
-def main():
-    load_dotenv()
-
-
-if __name__ == '__main__':
-    main()
