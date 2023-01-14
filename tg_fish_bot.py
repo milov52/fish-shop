@@ -11,16 +11,18 @@ from cms_api import get_cart, get_file_by_id, get_products, add_to_cart
 
 _database = None
 
-def create_products_keyboard():
+def create_products_keyboard(prefix=''):
     keyboard = []
     buttons = []
+
     products = get_products()
 
     for index, product in enumerate(products):
-        buttons.append(InlineKeyboardButton(product["name"], callback_data=product["id"]))
+        buttons.append(InlineKeyboardButton(prefix + product["name"], callback_data=product["id"]))
         if index % 2 == 0:
             keyboard.append(buttons)
-    keyboard.append([InlineKeyboardButton('Корзина', callback_data='cart')])
+    if not prefix:
+        keyboard.append([InlineKeyboardButton('Корзина', callback_data='cart')])
     return keyboard
 
 def start(bot, update):
@@ -40,7 +42,7 @@ def menu(bot, update):
     query = update.callback_query
 
     if query.data == 'cart':
-        cart(bot, update)
+        cart_detail(bot, update)
         return "START"
 
     product = get_products(query.data)
@@ -73,7 +75,7 @@ def menu(bot, update):
 
     return "HANDLE_DESCRIPTION"
 
-def cart(bot, update):
+def cart_detail(bot, update):
     cart_info = get_cart(update.callback_query.message.chat_id)
     message = ''
     for item in cart_info["cart_items"]:
@@ -86,10 +88,13 @@ def cart(bot, update):
     bot.delete_message(chat_id=update.callback_query.message.chat_id,
                        message_id=update.callback_query.message.message_id)
 
-    keyboard = [[InlineKeyboardButton("Назад", callback_data='Back')],
-                [InlineKeyboardButton('Заказать', callback_data='order')]
-                ]
+    keyboard = create_products_keyboard(prefix='Убрать из корзины ')
+    keyboard.append([InlineKeyboardButton("В меню", callback_data='Back')])
+    # keyboard = [[InlineKeyboardButton("В меню", callback_data='Back')],
+    #             [InlineKeyboardButton('Заказать', callback_data='order')]
+    #             ]
 
+    print(keyboard)
     bot.send_message(text=message,
 
                      chat_id=update.callback_query.message.chat_id,
@@ -99,7 +104,7 @@ def description(bot, update):
     query = update.callback_query
 
     if query.data == 'cart':
-        cart(bot, update)
+        cart_detail(bot, update)
 
     if query.data != 'Back':
         chat_id = update.callback_query.message.chat_id
@@ -137,7 +142,7 @@ def handle_users_reply(bot, update):
         'START': start,
         'HANDLE_MENU': menu,
         'HANDLE_DESCRIPTION': description,
-        'HANDLE_CART': cart,
+        'HANDLE_CART': cart_detail,
     }
 
     state_handler = states_functions[user_state]
