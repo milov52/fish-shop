@@ -91,11 +91,10 @@ def get_products(client_id, product_id=0):
     headers = {
         'Authorization': f'Bearer {access_token}'}
 
-    pcm_url = os.environ.get("BASE_URL")
     if product_id:
         product = {}
 
-        product_data = requests.get(f'{pcm_url}/products/{product_id}',
+        product_data = requests.get(f'https://api.moltin.com/v2/products/{product_id}',
                                     headers=headers)
         product_data.raise_for_status()
         product_data = product_data.json()["data"]
@@ -112,7 +111,7 @@ def get_products(client_id, product_id=0):
 
         return product
     else:
-        products_data = requests.get(f'{pcm_url}/products/',
+        products_data = requests.get(f'https://api.moltin.com/v2/products/',
                                      headers=headers)
         products_data.raise_for_status()
 
