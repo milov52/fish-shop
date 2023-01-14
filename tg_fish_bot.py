@@ -1,4 +1,5 @@
 import os
+from functools import partial
 
 import redis
 from dotenv import load_dotenv
@@ -10,12 +11,11 @@ import cms_api
 
 _database = None
 
-
 def create_products_keyboard():
     keyboard = []
     buttons = []
 
-    products = cms_api.get_products()
+    products = cms_api.get_products(client_id)
 
     for index, product in enumerate(products):
         buttons.append(InlineKeyboardButton(product["name"], callback_data=product["id"]))
@@ -46,7 +46,7 @@ def handle_menu(bot, update):
         view_cart(bot, update)
         return "HANDLE_CART"
 
-    product = cms_api.get_products(query.data)
+    product = cms_api.get_products(client_id, query.data)
     image_path = product["image_path"]
 
     name = product["name"]
@@ -76,7 +76,8 @@ def handle_menu(bot, update):
     return "HANDLE_DESCRIPTION"
 
 def generate_cart(bot, update):
-    cart_info = cms_api.get_cart(update.callback_query.message.chat_id)
+    chat_id = update.callback_query.message.chat_id
+    cart_info = cms_api.get_cart(chat_id,client_id)
     message = ''
     buttons = []
 
@@ -105,7 +106,7 @@ def view_cart(bot, update):
     elif query.data.startswith('delete'):
         item_id = query.data.split(':')[1]
         cart_id = query.message.chat_id
-        cms_api.delete_from_cart(cart_id, item_id)
+        cms_api.delete_from_cart(cart_id, item_id, client_id)
         generate_cart(bot, update)
     elif query.data == 'pay':
         bot.send_message(text='Пришлите адрес электронной почты:',
@@ -123,14 +124,15 @@ def view_cart(bot, update):
 
 def waiting_email(bot, update):
     email = update.message.text
-
+    chat_id = update.message.chat_id
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("В меню", callback_data='back')]
     ])
 
     bot.send_message(text=f'Ваш email: {email}',
-                     chat_id=update.message.chat_id,
+                     chat_id=chat_id,
                      reply_markup=keyboard)
+    cms_api.create_user_account(str(chat_id), email, client_id)
     return "START"
 
 def handle_description(bot, update):
@@ -196,12 +198,14 @@ def get_database_connection():
 if __name__ == '__main__':
     load_dotenv()
     token = os.environ.get("TELEGRAM_TOKEN")
+    client_id = os.environ.get("CLIENT_ID")
+
     db = get_database_connection()
 
     updater = Updater(token)
     dispatcher = updater.dispatcher
-    dispatcher.add_handler(CommandHandler('start', handle_users_reply))
-    dispatcher.add_handler(CallbackQueryHandler(handle_users_reply))
-    dispatcher.add_handler(MessageHandler(Filters.text, handle_users_reply))
+    dispatcher.add_handler(CommandHandler('start', partial(handle_users_reply, client_id)))
+    dispatcher.add_handler(CallbackQueryHandler(partial(handle_users_reply, client_id)))
+    dispatcher.add_handler(MessageHandler(Filters.text, partial(handle_users_reply, client_id)))
 
     updater.start_polling()
