@@ -33,12 +33,22 @@ def get_cart(cart_id):
     access_token = get_access_token()
     headers = {
         'Authorization': f'Bearer {access_token.json().get("access_token")}'}
-    cart = requests.get(f'https://api.moltin.com/v2/carts/{cart_id}', headers=headers)
-    cart_items = requests.get(f'https://api.moltin.com/v2/carts/{cart_id}/items', headers=headers)
+    cart_responce = requests.get(f'https://api.moltin.com/v2/carts/{cart_id}', headers=headers)
+    cart_items_response = requests.get(f'https://api.moltin.com/v2/carts/{cart_id}/items', headers=headers)
 
+    cart = []
+    for car_items in cart_items_response.json()["data"]:
+        cart_item = {}
+        cart_item["name"] = car_items["name"]
+        cart_item["description"] = car_items["description"]
+        cart_item["price"] = car_items["unit_price"]["amount"]
+        cart_item["quantity"] = car_items["quantity"]
+        cart_item["amount"] = car_items["value"]["amount"]
+        cart.append(cart_item)
 
-    print(cart.json())
-    print(cart_items.json())
+    full_amount = cart_responce.json()["data"]["meta"]["display_price"]["with_tax"]["amount"]
+    return {"cart_items": cart, "full_amount": full_amount}
+
 
 def get_products(product_id=0):
     access_token = get_access_token()
@@ -66,7 +76,7 @@ def get_products(product_id=0):
     else:
         products_data = requests.get(f'{pcm_url}/products/', headers=headers)
         products_data = products_data.json()
-        products = [{product["id"], product["name"]} for product in products_data["data"]]
+        products = [{"id":product["id"], "name": product["name"]} for product in products_data["data"]]
         return products
 
 def get_file_by_id(file_id):
@@ -80,12 +90,12 @@ def get_file_by_id(file_id):
 
 def main():
     load_dotenv()
-    # chat_id = 130324158
+    chat_id = 130324158
     product_id = "31ca00db-fd4a-480f-ad92-4dc69f6f839b"
-    # count = 2
-    # # add_to_cart(chat_id, product_id, count)
-    # get_cart(chat_id)
-    print(get_products(product_id))
+    count = 2
+    # add_to_cart(chat_id, product_id, count)
+    print(get_cart(chat_id))
+
 
 if __name__ == '__main__':
     main()
