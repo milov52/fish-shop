@@ -1,21 +1,36 @@
-import getopt
-import json
+import datetime
 import os
 
 import requests
 from dotenv import load_dotenv
 
-def get_access_token():
+
+def get_access_token(client_id: str):
     data = {
-        'client_id': os.environ.get("CLIENT_ID"),
+        'client_id': client_id,
         'client_secret': os.environ.get("CLIENT_SECRET"),
         'grant_type': os.environ.get("GRANT_TYPE"),
     }
-    access_token = requests.post('https://api.moltin.com/oauth/access_token', data=data)
-    return access_token
+    response_access_token = requests.post(
+        'https://api.moltin.com/oauth/access_token', data=data
+    )
+    response_access_token.raise_for_status()
 
-def add_to_cart(cart_id, product_id, quantity):
-    access_token = get_access_token()
+    access_token = response_access_token.json()
+    os.environ.setdefault('MOLTIN_TOKEN_EXPIRES_TIME', str(access_token['expires']))
+    os.environ.setdefault('ACCESS_TOKEN', access_token['access_token'])
+
+
+def check_access_token(client_id: str):
+    token_expires_time = os.getenv('MOLTIN_TOKEN_EXPIRES_TIME')
+    timestamp = int(datetime.now().timestamp())
+    if not token_expires_time or int(token_expires_time) < timestamp:
+        get_access_token(client_id)
+
+
+def add_to_cart(cart_id: str, product_id: str, quantity: int, client_id: str):
+    check_access_token(client_id)
+    access_token = os.getenv('ACCESS_TOKEN')
     headers = {
         'Authorization': f'Bearer {access_token.json().get("access_token")}'}
 
@@ -26,15 +41,24 @@ def add_to_cart(cart_id, product_id, quantity):
             "quantity": quantity
         }
     }
-    cart = requests.post(f'https://api.moltin.com/v2/carts/{cart_id}/items', json=cart_data, headers=headers)
+    cart = requests.post(f'https://api.moltin.com/v2/carts/{cart_id}/items',
+                         json=cart_data,
+                         headers=headers)
+    cart.raise_for_status()
 
 
-def get_cart(cart_id):
-    access_token = get_access_token()
+def get_cart(cart_id: str, client_id: str):
+    check_access_token(client_id)
+    access_token = os.getenv('ACCESS_TOKEN')
+
     headers = {
         'Authorization': f'Bearer {access_token.json().get("access_token")}'}
-    cart_responce = requests.get(f'https://api.moltin.com/v2/carts/{cart_id}', headers=headers)
-    cart_items_response = requests.get(f'https://api.moltin.com/v2/carts/{cart_id}/items', headers=headers)
+    cart_responce = requests.get(f'https://api.moltin.com/v2/carts/{cart_id}',
+                                 headers=headers)
+    cart_responce.raise_for_status()
+    cart_items_response = requests.get(f'https://api.moltin.com/v2/carts/{cart_id}/items',
+                                       headers=headers)
+    cart_items_response.raise_for_status()
 
     cart = []
     for cart_items in cart_items_response.json()["data"]:
@@ -50,14 +74,21 @@ def get_cart(cart_id):
     full_amount = cart_responce.json()["data"]["meta"]["display_price"]["with_tax"]["amount"]
     return {"cart_items": cart, "full_amount": full_amount}
 
-def delete_from_cart(cart_id, product_id):
-    access_token = get_access_token()
+
+def delete_from_cart(cart_id: str, product_id: str, client_id: str):
+    check_access_token(client_id)
+    access_token = os.getenv('ACCESS_TOKEN')
     headers = {
         'Authorization': f'Bearer {access_token.json().get("access_token")}'}
-    cart = requests.delete(f'https://api.moltin.com/v2/carts/{cart_id}/items/{product_id}', headers=headers)
 
-def get_products(product_id=0):
-    access_token = get_access_token()
+    cart = requests.delete(f'https://api.moltin.com/v2/carts/{cart_id}/items/{product_id}',
+                           headers=headers)
+    cart.raise_for_status()
+
+
+def get_products(client_id: str, product_id: str = ''):
+    check_access_token(client_id)
+    access_token = os.getenv('ACCESS_TOKEN')
     headers = {
         'Authorization': f'Bearer {access_token.json().get("access_token")}'}
 
@@ -65,7 +96,9 @@ def get_products(product_id=0):
     if product_id:
         product = {}
 
-        product_data = requests.get(f'{pcm_url}/products/{product_id}', headers=headers)
+        product_data = requests.get(f'{pcm_url}/products/{product_id}',
+                                    headers=headers)
+        product_data.raise_for_status()
         product_data = product_data.json()["data"]
 
         file_id = product_data["relationships"]["main_image"]["data"]["id"]
@@ -80,28 +113,30 @@ def get_products(product_id=0):
 
         return product
     else:
-        products_data = requests.get(f'{pcm_url}/products/', headers=headers)
+        products_data = requests.get(f'{pcm_url}/products/',
+                                     headers=headers)
+        products_data.raise_for_status()
+
         products_data = products_data.json()
-        products = [{"id":product["id"], "name": product["name"]} for product in products_data["data"]]
+        products = [{"id": product["id"], "name": product["name"]} for product in products_data["data"]]
         return products
 
-def get_file_by_id(file_id):
-    access_token = get_access_token()
+
+def get_file_by_id(file_id: str, client_id: str):
+    check_access_token(client_id)
+    access_token = os.getenv('ACCESS_TOKEN')
     headers = {
         'Authorization': f'Bearer {access_token.json().get("access_token")}'}
 
-    file_data = requests.get(f'https://api.moltin.com/v2/files/{file_id}', headers=headers)
+    file_data = requests.get(f'https://api.moltin.com/v2/files/{file_id}',
+                             headers=headers)
+    file_data.raise_for_status()
     return file_data.json()
+
 
 
 def main():
     load_dotenv()
-    chat_id = "130324158"
-    product_id = "31ca00db-fd4a-480f-ad92-4dc69f6f839b"
-    count = 2
-    # print(get_cart(chat_id))
-    delete_from_cart(chat_id, product_id)
-    # print(get_cart(chat_id))
 
 
 if __name__ == '__main__':
