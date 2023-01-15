@@ -81,9 +81,9 @@ def delete_from_cart(cart_id: str, product_id: str, client_id: str):
     headers = {
         'Authorization': f'Bearer {access_token}'}
 
-    cart = requests.delete(f'https://api.moltin.com/v2/carts/{cart_id}/items/{product_id}',
+    cart_delete_response = requests.delete(f'https://api.moltin.com/v2/carts/{cart_id}/items/{product_id}',
                            headers=headers)
-    cart.raise_for_status()
+    cart_delete_response.raise_for_status()
 
 
 def get_products(client_id, product_id=0):
