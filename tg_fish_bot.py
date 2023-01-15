@@ -12,11 +12,9 @@ import cms_api
 _database = None
 
 
-def create_products_keyboard():
+def create_keyboard_2_columns(products):
     keyboard = []
     buttons = []
-
-    products = cms_api.get_products(client_id=client_id)
 
     for index, product in enumerate(products):
         buttons.append(InlineKeyboardButton(product["name"],
@@ -30,7 +28,8 @@ def create_products_keyboard():
 
 
 def start(bot, update, client_id):
-    reply_markup = InlineKeyboardMarkup(create_products_keyboard())
+    products = cms_api.get_products(client_id=client_id)
+    reply_markup = InlineKeyboardMarkup(create_keyboard_2_columns(products))
 
     if update.message:
         update.message.reply_text(text="Please choice:", reply_markup=reply_markup)
