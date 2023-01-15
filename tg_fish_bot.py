@@ -35,10 +35,9 @@ def start(bot, update, client_id):
     if update.message:
         update.message.reply_text(text="Please choice:", reply_markup=reply_markup)
     else:
+        update.callback_query.message.reply_text(text="Please choice:", reply_markup=reply_markup)
         bot.delete_message(chat_id=update.callback_query.message.chat_id,
                            message_id=update.callback_query.message.message_id)
-        update.callback_query.message.reply_text(text="Please choice:", reply_markup=reply_markup)
-
     return "HANDLE_MENU"
 
 
@@ -68,13 +67,13 @@ def handle_menu(bot, update, client_id):
                 [InlineKeyboardButton('Корзина', callback_data='cart')]
                 ]
 
-    bot.delete_message(chat_id=update.callback_query.message.chat_id,
-                       message_id=update.callback_query.message.message_id)
-
     bot.send_photo(query.message.chat_id,
                    image_path,
                    caption=detail,
                    reply_markup=InlineKeyboardMarkup(keyboard))
+
+    bot.delete_message(chat_id=update.callback_query.message.chat_id,
+                       message_id=update.callback_query.message.message_id)
 
     return "HANDLE_DESCRIPTION"
 
@@ -119,13 +118,12 @@ def view_cart(bot, update, client_id):
                          chat_id=update.callback_query.message.chat_id)
         return "WAITING_EMAIL"
 
-    bot.delete_message(chat_id=update.callback_query.message.chat_id,
-                       message_id=update.callback_query.message.message_id)
-
     message, reply_markup = generate_cart(bot, update, client_id)
     bot.send_message(text=message,
                      chat_id=update.callback_query.message.chat_id,
                      reply_markup=reply_markup)
+    bot.delete_message(chat_id=update.callback_query.message.chat_id,
+                       message_id=update.callback_query.message.message_id)
     return "HANDLE_CART"
 
 
