@@ -52,9 +52,9 @@ def get_cart(cart_id: str, client_id: str):
 
     headers = {
         'Authorization': f'Bearer {access_token}'}
-    cart_responce = requests.get(f'https://api.moltin.com/v2/carts/{cart_id}',
+    cart_response = requests.get(f'https://api.moltin.com/v2/carts/{cart_id}',
                                  headers=headers)
-    cart_responce.raise_for_status()
+    cart_response.raise_for_status()
     cart_items_response = requests.get(f'https://api.moltin.com/v2/carts/{cart_id}/items',
                                        headers=headers)
     cart_items_response.raise_for_status()
