@@ -61,16 +61,17 @@ def get_cart(cart_id: str, client_id: str):
 
     cart = []
     for cart_items in cart_items_response.json()["data"]:
-        cart_item = {}
-        cart_item["id"] = cart_items["id"]
-        cart_item["name"] = cart_items["name"]
-        cart_item["description"] = cart_items["description"]
-        cart_item["price"] = cart_items["unit_price"]["amount"]
-        cart_item["quantity"] = cart_items["quantity"]
-        cart_item["amount"] = cart_items["value"]["amount"]
+        cart_item = {
+            "id": cart_items["id"],
+            "name": cart_items["name"],
+            "description": cart_items["description"],
+            "price": cart_items["unit_price"]["amount"],
+            "quantity": cart_items["quantity"],
+            "amount": cart_items["value"]["amount"]
+        }
         cart.append(cart_item)
 
-    full_amount = cart_responce.json()["data"]["meta"]["display_price"]["with_tax"]["amount"]
+    full_amount = cart_response.json()["data"]["meta"]["display_price"]["with_tax"]["amount"]
     return {"cart_items": cart, "full_amount": full_amount}
 
 
@@ -92,8 +93,6 @@ def get_products(client_id, product_id=0):
         'Authorization': f'Bearer {access_token}'}
 
     if product_id:
-        product = {}
-
         product_data = requests.get(f'https://api.moltin.com/v2/products/{product_id}',
                                     headers=headers)
         product_data.raise_for_status()
@@ -102,12 +101,14 @@ def get_products(client_id, product_id=0):
         file_id = product_data["relationships"]["main_image"]["data"]["id"]
         image_data = get_file_by_id(file_id, client_id)
 
-        product["file_id"] = file_id
-        product["image_path"] = image_data["data"]["link"]["href"]
-        product["name"] = product_data["name"]
-        product["description"] = product_data["description"]
-        product["price"] = product_data["meta"]["display_price"]["with_tax"]["formatted"]
-        product["stock"] = product_data["meta"]["stock"]["level"]
+        product = {
+            "file_id": file_id,
+            "image_path": image_data["data"]["link"]["href"],
+            "name": product_data["name"],
+            "description": product_data["description"],
+            "price": product_data["meta"]["display_price"]["with_tax"]["formatted"],
+            "stock": product_data["meta"]["stock"]["level"]
+        }
 
         return product
     else:
