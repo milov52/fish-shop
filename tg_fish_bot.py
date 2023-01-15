@@ -11,6 +11,7 @@ import cms_api
 
 _database = None
 
+
 def create_products_keyboard():
     keyboard = []
     buttons = []
@@ -77,6 +78,7 @@ def handle_menu(bot, update, client_id):
 
     return "HANDLE_DESCRIPTION"
 
+
 def generate_cart(bot, update, client_id):
     chat_id = update.callback_query.message.chat_id
     cart_info = cms_api.get_cart(chat_id, client_id)
@@ -100,13 +102,15 @@ def generate_cart(bot, update, client_id):
     reply_markup = InlineKeyboardMarkup(buttons)
     return message, reply_markup
 
+
 def view_cart(bot, update, client_id):
     query = update.callback_query
+
     if query.data == 'back':
         start(bot, update, client_id)
         return "HANDLE_MENU"
     elif query.data.startswith('delete'):
-        item_id = query.data.split(':')[1]
+        item_id = _, query.data.split(':')
         cart_id = query.message.chat_id
         cms_api.delete_from_cart(cart_id, item_id, client_id)
         generate_cart(bot, update, client_id)
@@ -124,6 +128,7 @@ def view_cart(bot, update, client_id):
                      reply_markup=reply_markup)
     return "HANDLE_CART"
 
+
 def waiting_email(bot, update, client_id):
     email = update.message.text
     chat_id = update.message.chat_id
@@ -137,6 +142,7 @@ def waiting_email(bot, update, client_id):
     cms_api.create_user_account(str(chat_id), email, client_id)
     return "START"
 
+
 def handle_description(bot, update, client_id):
     query = update.callback_query
 
@@ -149,9 +155,8 @@ def handle_description(bot, update, client_id):
 
     chat_id = update.callback_query.message.chat_id
 
-    product_id = query.data.split(',')[0]
-    count = int(query.data.split(',')[1])
-    cms_api.add_to_cart(chat_id, product_id, count, client_id)
+    product_id, count = query.data.split(',')
+    cms_api.add_to_cart(chat_id, product_id, int(count), client_id)
     return "HANDLE_DESCRIPTION"
 
 
