@@ -108,7 +108,7 @@ def view_cart(bot, update, client_id):
         start(bot, update, client_id)
         return "HANDLE_MENU"
     elif query.data.startswith('delete'):
-        item_id = _, query.data.split(':')
+        _, item_id = query.data.split(':')
         cart_id = query.message.chat_id
         cms_api.delete_from_cart(cart_id, item_id, client_id)
         generate_cart(bot, update, client_id)
