@@ -48,7 +48,7 @@ def handle_menu(bot, update, client_id):
         view_cart(bot, update, client_id)
         return "HANDLE_CART"
 
-    product = cms_api.get_products(product_id=query.data, client_id=client_id)
+    product = cms_api.get_product(product_id=query.data, client_id=client_id)
     image_path = product["image_path"]
 
     name = product["name"]

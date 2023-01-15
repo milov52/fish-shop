@@ -86,39 +86,45 @@ def delete_from_cart(cart_id: str, product_id: str, client_id: str):
     cart_delete_response.raise_for_status()
 
 
-def get_products(client_id, product_id=0):
+def get_products(client_id):
     check_access_token(client_id)
     access_token = os.getenv('ACCESS_TOKEN')
     headers = {
         'Authorization': f'Bearer {access_token}'}
 
-    if product_id:
-        product_data = requests.get(f'https://api.moltin.com/v2/products/{product_id}',
-                                    headers=headers)
-        product_data.raise_for_status()
-        product_data = product_data.json()["data"]
-
-        file_id = product_data["relationships"]["main_image"]["data"]["id"]
-        image_data = get_file_by_id(file_id, client_id)
-
-        product = {
-            "file_id": file_id,
-            "image_path": image_data["data"]["link"]["href"],
-            "name": product_data["name"],
-            "description": product_data["description"],
-            "price": product_data["meta"]["display_price"]["with_tax"]["formatted"],
-            "stock": product_data["meta"]["stock"]["level"]
-        }
-
-        return product
-    else:
-        products_data = requests.get(f'https://api.moltin.com/v2/products/',
+    products_data = requests.get(f'https://api.moltin.com/v2/products/',
                                      headers=headers)
-        products_data.raise_for_status()
+    products_data.raise_for_status()
 
-        products_data = products_data.json()
-        products = [{"id": product["id"], "name": product["name"]} for product in products_data["data"]]
-        return products
+    products_data = products_data.json()
+    products = [{"id": product["id"], "name": product["name"]} for product in products_data["data"]]
+    return products
+
+def get_product(product_id, client_id):
+    check_access_token(client_id)
+    access_token = os.getenv('ACCESS_TOKEN')
+    headers = {
+        'Authorization': f'Bearer {access_token}'}
+
+
+    product_data = requests.get(f'https://api.moltin.com/v2/products/{product_id}',
+                                headers=headers)
+    product_data.raise_for_status()
+    product_data = product_data.json()["data"]
+
+    file_id = product_data["relationships"]["main_image"]["data"]["id"]
+    image_data = get_file_by_id(file_id, client_id)
+
+    product = {
+        "file_id": file_id,
+        "image_path": image_data["data"]["link"]["href"],
+        "name": product_data["name"],
+        "description": product_data["description"],
+        "price": product_data["meta"]["display_price"]["with_tax"]["formatted"],
+        "stock": product_data["meta"]["stock"]["level"]
+    }
+
+    return product
 
 
 def get_file_by_id(file_id: str, client_id: str):
